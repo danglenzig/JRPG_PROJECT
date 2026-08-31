@@ -1,0 +1,21 @@
+# Unreal build output
+JRPG_PROJECT/Binaries/
+JRPG_PROJECT/Build/
+JRPG_PROJECT/Intermediate/
+JRPG_PROJECT/Saved/
+JRPG_PROJECT/DerivedDataCache/
+JRPG_PROJECT/FileOpenOrder/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Compiled files
+*.pdb
+*.exp
+*.lib
+
+# Exclude packaged builds
+*.pak
+*.sig
