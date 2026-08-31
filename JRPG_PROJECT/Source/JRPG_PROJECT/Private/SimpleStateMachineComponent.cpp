@@ -21,9 +21,6 @@ void USimpleStateMachineComponent::BeginPlay()
 	CurrentState = StartingState;
 	OnStateEntered.Broadcast(CurrentState);
 	UE_LOG(LogTemp, Log, TEXT("### SimpleStateMachine: SM initialized in state: %s"), *CurrentState.ToString());
-	
-	
-	
 }
 
 
