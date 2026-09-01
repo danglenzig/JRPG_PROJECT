@@ -11,16 +11,24 @@ USimpleStateMachineComponent::USimpleStateMachineComponent()
 void USimpleStateMachineComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
-	if (StartingState == NAME_None)
+	
+	
+	if (!StartingStateTag.IsValid())
 	{
-		UE_LOG(LogTemp, Error, TEXT("### SimpleStateMachine: Initial state not set"));
+		UE_LOG(LogTemp, Error, TEXT("### SimpleStateMachine: SM has no valid initial state."));
+	}
+	StateHistoryNames.Add(CurrentStateName); // Adds NONE as the first state history
+	CurrentStateName = StartingStateTag.GetTagName();
+	FGameplayTag CurrentStateTag = UGameplayTagsManager::Get().RequestGameplayTag(CurrentStateName);
+	
+	if (!CurrentStateTag.IsValid())
+	{
+		UE_LOG(LogTemp, Error, TEXT("### SimpleStateMachine: SM has no valid initial state."));
 		return;
 	}
-	StateHistory.Add(CurrentState); // Adds Name_None as the first state history
-	CurrentState = StartingState;
-	OnStateEntered.Broadcast(CurrentState);
-	UE_LOG(LogTemp, Log, TEXT("### SimpleStateMachine: SM initialized in state: %s"), *CurrentState.ToString());
+	OnStateEntered.Broadcast(CurrentStateTag);
+	UE_LOG(LogTemp, Log, TEXT("### SimpleStateMachine: SM initialized in state: %s"), *CurrentStateName.ToString());
+	
 }
 
 
@@ -32,35 +40,42 @@ void USimpleStateMachineComponent::TickComponent(float DeltaTime, ELevelTick Tic
 	// ...
 }
 
-bool USimpleStateMachineComponent::RequestTransition(FName ToState)
+bool USimpleStateMachineComponent::RequestTransition(FGameplayTag ToStateTag)
 {
-	// find the first (which should be the ONLY) transition whose
-	//   FromStateName is the current state
+	
+	if (!ToStateTag.IsValid())
+	{
+		UE_LOG(LogTemp, Error, TEXT("### SimpleStateMachine: Invalid state transition requested."));
+		return false;
+	}
+	
 	const FSimpleTransitionsStruct* MatchingTransition = Transitions.FindByPredicate(
 		[this](const FSimpleTransitionsStruct& Transition)
 		{
-			return Transition.FromStateName == CurrentState;
+			return Transition.FromStateTag == UGameplayTagsManager::Get().RequestGameplayTag(CurrentStateName);
 		}
 	);
 	
 	if (!MatchingTransition)
 	{
-		UE_LOG(LogTemp, Log, TEXT("### SimpleStateMachine: Current state not found in Transitions list: %s"), *CurrentState.ToString());
+		UE_LOG(LogTemp, Log, TEXT("### SimpleStateMachine: Current state not found in Transitions list: %s"), *CurrentStateName.ToString());
 		return false;
 	}
 	
 	// iterate through all the to-states allowed for the current state
-	for (const auto& AllowedToState : MatchingTransition->ToStateNames)
+	TArray<FGameplayTag> TagsArray = MatchingTransition->ToStateTags.GetGameplayTagArray();
+	//for (const auto& AllowedToStateTag : MatchingTransition->ToStateTags)
+	for (const auto& AllowedToStateTag : TagsArray)
 	{
 		// when / if we find one matching the requested new state...
-		if (AllowedToState == ToState)
+		if (AllowedToStateTag == ToStateTag)
 		{
-			StateHistory.Add(CurrentState);
+			StateHistoryNames.Add(CurrentStateName);
 			GroomStateHistory();
-			OnStateExited.Broadcast(CurrentState);
-			CurrentState = ToState;
-			OnStateEntered.Broadcast(CurrentState);
-			UE_LOG(LogTemp, Log, TEXT("### SimpleStateMachine: New current state: %s"), *CurrentState.ToString());
+			OnStateExited.Broadcast(UGameplayTagsManager::Get().RequestGameplayTag(CurrentStateName));
+			CurrentStateName = ToStateTag.GetTagName();
+			OnStateEntered.Broadcast(ToStateTag);
+			UE_LOG(LogTemp, Log, TEXT("### SimpleStateMachine: New current state: %s"), *CurrentStateName.ToString());
 			return true;
 		}
 	}
@@ -68,16 +83,17 @@ bool USimpleStateMachineComponent::RequestTransition(FName ToState)
 	// this is a Log message, and not Warning or Error because there could be 
 	// perfectly legit reasons that the state cannot transition, and is expected to
 	// happen during normal gameplay from time to time
-	UE_LOG(LogTemp, Log, TEXT("### SimpleStateMachine: Current state has no allowed transition to state %s"), *ToState.ToString());
+	FName ToStateName = ToStateTag.GetTagName();
+	UE_LOG(LogTemp, Log, TEXT("### SimpleStateMachine: Current state has no allowed transition to state %s"), *ToStateName.ToString());
 	return false;
 }
 
 void USimpleStateMachineComponent::GroomStateHistory()
 {
 	// if the history size is greated that the max
-	if (StateHistory.Num() > StateHistorySize)
+	if (StateHistoryNames.Num() > StateHistorySize)
 	{
 		// remove the oldest one
-		StateHistory.RemoveAt(0);
+		StateHistoryNames.RemoveAt(0);
 	}
 }
