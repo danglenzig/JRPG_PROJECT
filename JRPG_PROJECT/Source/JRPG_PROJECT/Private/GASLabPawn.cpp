@@ -15,3 +15,9 @@ UAbilitySystemComponent* AGASLabPawn::GetAbilitySystemComponent() const
 	return AbilitySystemComponent;
 }
 
+void AGASLabPawn::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+	AbilitySystemComponent->InitAbilityActorInfo(this, this);
+}
+

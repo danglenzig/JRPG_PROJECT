@@ -18,6 +18,9 @@ public:
 	// override the one function in IAbilitySystemInterface
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	
+	// override DefaultPawn's PossesedBy function
+	virtual void PossessedBy(AController* NewController) override;
+	
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Abilities")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
 	
